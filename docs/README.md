@@ -63,7 +63,7 @@ ecommerce-bi-forecast/
 - Trend line: Revenue vs Last Year
 - Breakdown: Revenue by Region & Channel
 
-![Executive Overview](docs/screenshots/Pages de Global_Ecommerce_KPI.pdf.jpg)
+![Executive Overview](docs/screenshots/Pages_de_Global_Ecommerce_KPI.jpg)
 
 ---
 
@@ -74,7 +74,7 @@ ecommerce-bi-forecast/
 - Trend: Regional Revenue vs LY
 - Top 5 Countries by Revenue
 
-![Region Drilldown](docs/screenshots/Pages de Global_Ecommerce_KPI-2.pdf.jpg)
+![Region Drilldown](docs/screenshots/Pages_de_Global_Ecommerce_KPI-2.jpg)
 
 ---
 
@@ -85,7 +85,7 @@ ecommerce-bi-forecast/
 - Marketing Spend vs Revenue trend
 - ROI by Channel table
 
-![Channel Performance](docs/screenshots/Pages de Global_Ecommerce_KPI-3.pdf.jpg)
+![Channel Performance](docs/screenshots/Pages_de_Global_Ecommerce_KPI-3.jpg)
 
 ---
 
@@ -96,7 +96,7 @@ ecommerce-bi-forecast/
 - Returns by Reason Code
 - Country-level delivery KPIs
 
-![Delivery & Returns](docs/screenshots/Pages de Global_Ecommerce_KPI-4.pdf.jpg)
+![Delivery & Returns](docs/screenshots/Pages_de_Global_Ecommerce_KPI-4.jpg)
 
 ---
 
@@ -106,7 +106,7 @@ ecommerce-bi-forecast/
 - OTD % Actual + Forecast
 - Forecast summary table (next 6 months)
 
-![Forecast Panel](docs/screenshots/Pages de Global_Ecommerce_KPI-5.pdf.jpg)
+![Forecast Panel](docs/screenshots/Pages_de_Global_Ecommerce_KPI-5.jpg)
 
 ---
 
