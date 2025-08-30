@@ -1,0 +1,148 @@
+// ===============================
+// Data Quality Page - DAX Bundle
+// ===============================
+// Paste these as MEASURES (Modeling > New measure) unless noted as a Calculated Column/Table.
+// Adjust table names if yours differ: 'orders', 'marketing', 'returns', 'customers', 'Date'.
+
+// ---------- Row counts ----------
+Orders Rows := COUNTROWS('orders')
+Marketing Rows := COUNTROWS('marketing')
+Returns Rows := COUNTROWS('returns')
+Customers Rows := COUNTROWS('customers')
+
+// ---------- Completeness (non-blank % on critical fields) ----------
+Orders Completeness % :=
+VAR NonBlank =
+    COUNTROWS(
+        FILTER(
+            'orders',
+            NOT ISBLANK('orders'[order_date]) &&
+            NOT ISBLANK('orders'[revenue]) &&
+            NOT ISBLANK('orders'[customer_id])
+        )
+    )
+RETURN DIVIDE(NonBlank, [Orders Rows])
+
+Marketing Completeness % :=
+VAR NonBlank =
+    COUNTROWS(
+        FILTER(
+            'marketing',
+            NOT ISBLANK('marketing'[date]) &&
+            NOT ISBLANK('marketing'[sessions]) &&
+            NOT ISBLANK('marketing'[spend])
+        )
+    )
+RETURN DIVIDE(NonBlank, [Marketing Rows])
+
+// ---------- Blank % by column (for heatmap table) ----------
+Orders Blank Revenue % :=
+DIVIDE(
+    CALCULATE(COUNTROWS('orders'), ISBLANK('orders'[revenue])),
+    [Orders Rows]
+)
+
+Orders Blank Ship Date % :=
+DIVIDE(
+    CALCULATE(COUNTROWS('orders'), ISBLANK('orders'[ship_date])),
+    [Orders Rows]
+)
+
+Orders Blank Delivery Date % :=
+DIVIDE(
+    CALCULATE(COUNTROWS('orders'), ISBLANK('orders'[delivery_date])),
+    [Orders Rows]
+)
+
+Marketing Blank Spend % :=
+DIVIDE(
+    CALCULATE(COUNTROWS('marketing'), ISBLANK('marketing'[spend])),
+    [Marketing Rows]
+)
+
+Marketing Blank Sessions % :=
+DIVIDE(
+    CALCULATE(COUNTROWS('marketing'), ISBLANK('marketing'[sessions])),
+    [Marketing Rows]
+)
+
+// ---------- Duplicates (primary keys) ----------
+Orders Duplicate IDs :=
+VAR Total = [Orders Rows]
+VAR DistinctIds = DISTINCTCOUNT('orders'[order_id])
+RETURN Total - DistinctIds
+
+Returns Duplicate IDs :=
+VAR Total = [Returns Rows]
+VAR DistinctIds = DISTINCTCOUNT('returns'[return_id])
+RETURN Total - DistinctIds
+
+// ---------- Referential integrity (returns -> orders) ----------
+// Requires relationship: 'returns'[order_id] -> 'orders'[order_id]
+Orphan Returns :=
+VAR LinkedCount =
+    CALCULATE(
+        COUNTROWS('returns'),
+        TREATAS(VALUES('returns'[order_id]), 'orders'[order_id])
+    )
+RETURN [Returns Rows] - LinkedCount
+
+// ---------- Freshness ----------
+Last Orders Date := MAX('orders'[order_date])
+
+Data Freshness (days) :=
+DATEDIFF([Last Orders Date], TODAY(), DAY)
+
+// ---------- Anomaly checks (simple rolling baseline) ----------
+Revenue Today := CALCULATE([Revenue], 'Date'[Date] = TODAY())
+
+Revenue 30d Avg :=
+VAR d = MAX('Date'[Date])
+RETURN
+AVERAGEX(
+    DATESINPERIOD('Date'[Date], d, -30, DAY),
+    [Revenue]
+)
+
+Revenue Spike Flag :=
+VAR Ratio = DIVIDE([Revenue Today], [Revenue 30d Avg])
+RETURN IF(NOT ISBLANK(Ratio) && Ratio > 1.5, 1, 0)
+
+Revenue Drop Flag :=
+VAR Ratio = DIVIDE([Revenue Today], [Revenue 30d Avg])
+RETURN IF(NOT ISBLANK(Ratio) && Ratio < 0.5, 1, 0)
+
+// ---------- Overall Health Score (0–100) ----------
+Health Score :=
+VAR Completeness = 0.5 * [Orders Completeness %] + 0.5 * [Marketing Completeness %]
+VAR DupPenalty = IF([Orders Duplicate IDs] + [Returns Duplicate IDs] > 0, 0.10, 0.00)
+VAR OrphanPenalty = IF([Orphan Returns] > 0, 0.10, 0.00)
+VAR FreshPenalty =
+    VAR Days = [Data Freshness (days)]
+    RETURN IF(Days <= 2, 0.00, IF(Days <= 7, 0.05, 0.15))
+VAR AnomalyPenalty = IF([Revenue Spike Flag] + [Revenue Drop Flag] > 0, 0.05, 0.00)
+VAR Score = 100 * (Completeness) * (1 - DupPenalty - OrphanPenalty - FreshPenalty - AnomalyPenalty)
+RETURN ROUND(MAX(0, MIN(100, Score)), 0)
+
+// ---------- Late Delivery % by region/country (for breakdowns) ----------
+// Prereq Calculated Column (orders table, not a measure):
+// Is On Time = IF('orders'[delivery_date] <= 'orders'[promised_delivery_date], 1, 0)
+Late Delivery % := 1 - AVERAGE('orders'[Is On Time])
+
+// ---------- Daily Orders (for freshness trend) ----------
+Orders per Day := COUNTROWS('orders')
+
+// ---------- Optional diagnostic calculated tables (NOT measures) ----------
+// Modeling > New table:
+
+// Orders Duplicate List =
+// FILTER(
+//     SUMMARIZE('orders', 'orders'[order_id], "Cnt", COUNTROWS('orders')),
+//     [Cnt] > 1
+// )
+
+// Orphan Returns Table =
+// EXCEPT(
+//     SUMMARIZE('returns', 'returns'[order_id]),
+//     SUMMARIZE('orders',  'orders'[order_id])
+// )

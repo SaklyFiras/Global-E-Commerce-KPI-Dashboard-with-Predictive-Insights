@@ -1,0 +1,54 @@
+// Measures adjusted to your table names: 'orders', 'marketing', 'Date'
+// Paste each block as a separate MEASURE (Modeling > New measure).
+
+Revenue := SUM(orders[revenue])
+
+Orders := COUNTROWS(orders)
+
+AOV := DIVIDE([Revenue], [Orders])
+
+Sessions := SUM(marketing[sessions])
+
+Conversion Rate % := DIVIDE([Orders], [Sessions])
+
+Returns :=
+CALCULATE(
+    COUNTROWS(orders),
+    orders[returned_flag] = TRUE()
+)
+
+Return Rate % := DIVIDE([Returns], [Orders])
+
+Deliveries On Time :=
+CALCULATE(
+    COUNTROWS(orders),
+    orders[delivery_date] <= orders[promised_delivery_date]
+)
+
+OTD % := DIVIDE([Deliveries On Time], [Orders])
+
+Revenue LY := CALCULATE([Revenue], DATEADD('Date'[Date], -1, YEAR))
+
+Revenue Growth % := DIVIDE([Revenue] - [Revenue LY], [Revenue LY])
+
+Marketing Spend := SUM(marketing[spend])
+
+COGS := SUM(orders[cogs])
+
+Gross Profit := [Revenue] - [COGS]
+
+Channel ROI := DIVIDE([Gross Profit], [Marketing Spend])
+
+New Customers :=
+VAR MinDate = MIN('Date'[Date])
+VAR MaxDate = MAX('Date'[Date])
+VAR FirstOrders =
+    SUMMARIZE(
+        orders,
+        orders[customer_id],
+        "FirstDate", CALCULATE(MIN(orders[order_date]), ALL('Date'))
+    )
+RETURN
+COUNTROWS(
+    FILTER(FirstOrders, [FirstDate] >= MinDate && [FirstDate] <= MaxDate)
+)
